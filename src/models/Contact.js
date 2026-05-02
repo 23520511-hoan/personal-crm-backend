@@ -33,8 +33,11 @@ const contactSchema = new mongoose.Schema({
   address: { type: String },
   avatarUrl: { type: String },
   socialLinks: [{ type: String }],
-  source: { type: String, trim: true },
   statusId: { type: mongoose.Schema.Types.ObjectId, ref: 'Status' },
+  
+  // TỐI ƯU UX CHO SOURCE: Backend lưu String. 
+  // Frontend sẽ hiển thị Dropdown list + Option "Khác...". Nếu user bỏ qua sẽ lấy default.
+  source: { type: String, trim: true, default: 'Chưa phân loại' }, 
   
   // Nhóm tính năng Google Import (Chờ sẵn cho V2)
   importedFrom: { type: String, enum: ['manual', 'google'], default: 'manual' },
