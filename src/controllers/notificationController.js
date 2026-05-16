@@ -1,72 +1,48 @@
-const Notification = require('../models/Notification');
+const Notification = require('../models/Notification'); // Đảm bảo có model này
 
-// [GET] /api/notifications - Lấy danh sách thông báo
+// [GET] /api/notifications
 exports.getNotifications = async (req, res) => {
   try {
-    const { isRead, type } = req.query;
-    let query = { userId: req.user._id };
-
-    // Lọc theo trạng thái đã đọc/chưa đọc nếu có truyền lên
-    if (isRead !== undefined) {
-      query.isRead = isRead === 'true';
-    }
-    // Lọc theo loại thông báo (REMINDER, SPECIAL_DAY, SUGGESTION, SYSTEM)
-    if (type) {
-      query.type = type;
-    }
-
-    // Lấy danh sách, mới nhất xếp lên đầu
+    const query = { userId: req.user._id };
+    if (req.query.isRead !== undefined) query.isRead = req.query.isRead === 'true';
+    
     const notifications = await Notification.find(query).sort({ createdAt: -1 });
-    
     res.json(notifications);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi server khi lấy thông báo', error: error.message });
-  }
-};
-
-// [GET] /api/notifications/unread-count - Đếm số lượng thông báo chưa đọc
-exports.getUnreadCount = async (req, res) => {
-  try {
-    const unreadCount = await Notification.countDocuments({ 
-      userId: req.user._id, 
-      isRead: false 
-    });
-    
-    res.json({ unreadCount });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi đếm thông báo', error: error.message });
-  }
-};
-
-// [PATCH] /api/notifications/read-all - Đánh dấu TẤT CẢ là đã đọc
-exports.markAllAsRead = async (req, res) => {
-  try {
-    await Notification.updateMany(
-      { userId: req.user._id, isRead: false },
-      { $set: { isRead: true } }
-    );
-    
-    res.json({ message: 'Đã đánh dấu tất cả là đã đọc' });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 
-// [PATCH] /api/notifications/:id/read - Đánh dấu 1 thông báo là đã đọc
+// [GET] /api/notifications/unread-count
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({ userId: req.user._id, isRead: false });
+    res.json({ unreadCount: count });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// [PATCH] /api/notifications/read-all
+exports.markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.user._id, isRead: false }, { isRead: true });
+    res.json({ message: 'Đã đánh dấu đọc tất cả' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// [PATCH] /api/notifications/:id/read
 exports.markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findOneAndUpdate(
+    const notif = await Notification.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      { $set: { isRead: true } },
+      { isRead: true },
       { new: true }
     );
-
-    if (!notification) {
-      return res.status(404).json({ message: 'Không tìm thấy thông báo' });
-    }
-    
-    res.json(notification);
+    res.json(notif);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi cập nhật thông báo', error: error.message });
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };

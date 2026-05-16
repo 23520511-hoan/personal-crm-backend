@@ -1,5 +1,6 @@
 const Contact = require('../models/Contact');
 const Note = require('../models/Note'); // Bổ sung dòng này để lấy Ghi chú
+const mongoose = require('mongoose');
 
 // [GET] /api/contacts - Lấy danh sách liên hệ (Có hỗ trợ tìm kiếm và lọc)
 exports.getContacts = async (req, res) => {
@@ -27,30 +28,43 @@ exports.getContacts = async (req, res) => {
   }
 };
 
-// [GET] /api/contacts/:id - Lấy chi tiết 1 liên hệ
+// [GET] /api/contacts/:id - Lấy chi tiết 1 Contact để Frontend fill vào form Edit
 exports.getContactById = async (req, res) => {
   try {
-    const contact = await Contact.findOne({ 
-      _id: req.params.id, 
-      userId: req.user._id, 
-      isDeleted: false 
-    }).populate('statusId', 'name color');
+    const contact = await Contact.findOne({
+      _id: req.params.id,
+      userId: req.user._id, // Đảm bảo chỉ lấy contact của user đang đăng nhập
+      isDeleted: false
+    });
 
-    if (!contact) return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
-    
+    if (!contact) {
+      return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
+    }
+
     res.json(contact);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server khi lấy chi tiết liên hệ', error: error.message });
+    console.error("Lỗi lấy chi tiết Contact:", error);
+    res.status(500).json({ message: 'Lỗi server khi lấy liên hệ', error: error.message });
   }
 };
 
 // [POST] /api/contacts - Tạo liên hệ đầy đủ
 exports.createContact = async (req, res) => {
   try {
+    console.log("=== DỮ LIỆU FRONTEND GỬI LÊN ĐỂ TẠO CONTACT ===", req.body);
+    
     const contactData = { ...req.body, userId: req.user._id };
+    
+    // TẤM KHIÊN THÉP: Kiểm tra xem statusId có phải ID chuẩn 24 ký tự của MongoDB không
+    if (contactData.statusId && !mongoose.Types.ObjectId.isValid(contactData.statusId)) {
+      console.log(`⚠️ Bỏ qua statusId dỏm từ Frontend: ${contactData.statusId}`);
+      delete contactData.statusId; 
+    }
+
     const contact = await Contact.create(contactData);
     res.status(201).json(contact);
   } catch (error) {
+    console.error("!!! BẮT ĐƯỢC LỖI TẠO CONTACT !!!", error);
     res.status(500).json({ message: 'Lỗi server khi tạo liên hệ', error: error.message });
   }
 };
@@ -72,19 +86,32 @@ exports.quickCreateContact = async (req, res) => {
   }
 };
 
-// [PATCH] /api/contacts/:id - Cập nhật thông tin liên hệ
+// [PATCH/PUT] /api/contacts/:id
 exports.updateContact = async (req, res) => {
   try {
+    console.log(`=== DỮ LIỆU FRONTEND GỬI UPDATE CONTACT (${req.params.id}) ===`, req.body);
+    
+    const updateData = { ...req.body };
+
+    // TẤM KHIÊN THÉP: Chặn ID dỏm giống y hệt lúc Create
+    if (updateData.statusId && !mongoose.Types.ObjectId.isValid(updateData.statusId)) {
+      console.log(`⚠️ Update: Bỏ qua statusId dỏm từ Frontend: ${updateData.statusId}`);
+      delete updateData.statusId; 
+    }
+
     const contact = await Contact.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id, isDeleted: false },
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('statusId', 'name color');
+      updateData,
+      { new: true } // Tham số này giúp trả về cục data mới nhất sau khi update
+    );
 
-    if (!contact) return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
-    
+    if (!contact) {
+      return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
+    }
+
     res.json(contact);
   } catch (error) {
+    console.error("!!! BẮT ĐƯỢC LỖI UPDATE CONTACT !!!", error);
     res.status(500).json({ message: 'Lỗi server khi cập nhật liên hệ', error: error.message });
   }
 };

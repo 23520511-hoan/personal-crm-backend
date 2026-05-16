@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { updateProfile, changePassword } = require('../controllers/userController');
+const { getProfile, updateProfile, changePassword } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Gắn hàm protect vào để bắt buộc phải có Token mới được gọi
-router.put('/profile', protect, updateProfile);
-router.put('/change-password', protect, changePassword);
+// Khớp 100% với userApi.ts của frontend
+router.get('/me', protect, getProfile);
+router.patch('/me', protect, updateProfile);
+router.patch('/change-password', protect, changePassword);
 
 module.exports = router;

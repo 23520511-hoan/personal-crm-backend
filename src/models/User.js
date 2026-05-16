@@ -8,8 +8,7 @@ const userSchema = new mongoose.Schema({
   // Thông tin cá nhân - name không required khi mới đăng ký, sẽ bổ sung sau khi verify
   name: { type: String, trim: true, default: null },
   avatarUrl: { type: String },
-  bio: { type: String, trim: true },
-
+  bio: { type: String, default: '' }, // THÊM DÒNG NÀY VÀO NÈ
   // Trạng thái xác thực
   isVerified: { type: Boolean, default: false },
   otp: { type: String, default: null },

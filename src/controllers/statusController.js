@@ -4,10 +4,32 @@ const Contact = require('../models/Contact');
 // [GET] /api/statuses - Lấy danh sách trạng thái của user
 exports.getStatuses = async (req, res) => {
   try {
-    const statuses = await Status.find({ userId: req.user._id });
+    let statuses = await Status.find({ userId: req.user._id, isDeleted: false });
+    
+    if (statuses.length === 0) {
+      // Đếm xem thực sự user đã có status nào trong database chưa (kể cả cái bị lỗi/ẩn)
+      const totalCount = await Status.countDocuments({ userId: req.user._id });
+      
+      if (totalCount === 0) {
+        const defaultStatuses = [
+          { userId: req.user._id, name: 'Close Friend', color: '#FF5733', icon: 'heart' },
+          { userId: req.user._id, name: 'Work', color: '#3357FF', icon: 'briefcase' },
+          { userId: req.user._id, name: 'Other', color: '#808080', icon: 'user' }
+        ];
+        try {
+          await Status.insertMany(defaultStatuses);
+        } catch (insertError) {
+          console.log("⚠️ Bỏ qua lỗi trùng tên Status mặc định");
+        }
+      }
+      // Query lại sau khi xử lý
+      statuses = await Status.find({ userId: req.user._id, isDeleted: false });
+    }
+    
     res.json(statuses);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server khi lấy danh sách trạng thái', error: error.message });
+    console.error("!!! LỖI GET STATUS LIST !!!", error);
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 

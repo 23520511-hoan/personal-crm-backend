@@ -1,42 +1,36 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
+// [GET] /api/users/me - Lấy thông tin user cho màn Setting
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi lấy profile', error: error.message });
+  }
+};
+
+// ... Ở dưới là mấy hàm updateProfile, changePassword cũ của bro cứ giữ nguyên ...
+
 // [PUT] /api/users/profile - Sửa thông tin cá nhân
 exports.updateProfile = async (req, res) => {
-    try {
-      const user = await User.findById(req.user._id);
-  
-      if (user) {
-        user.name = req.body.name || user.name;
-        if (req.body.bio !== undefined) user.bio = req.body.bio;
-        if (req.body.avatarUrl) user.avatarUrl = req.body.avatarUrl;
-        
-        // Xử lý an toàn tuyệt đối cho object lồng nhau trong Mongoose
-        if (req.body.settings) {
-          if (req.body.settings.darkMode !== undefined) user.settings.darkMode = req.body.settings.darkMode;
-          if (req.body.settings.language !== undefined) user.settings.language = req.body.settings.language;
-          
-          // Cực kỳ quan trọng: Báo cho Mongoose biết trường settings đã bị thay đổi
-          user.markModified('settings');
-        }
-  
-        const updatedUser = await user.save();
-        
-        res.json({
-          _id: updatedUser._id,
-          name: updatedUser.name,
-          bio: updatedUser.bio,
-          avatarUrl: updatedUser.avatarUrl,
-          settings: updatedUser.settings
-        });
-      } else {
-        res.status(404).json({ message: 'Không tìm thấy người dùng' });
-      }
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi server khi cập nhật hồ sơ', error: error.message });
-    }
-  };
-
+  try {
+    // Phải có chữ bio ở đây thì nó mới lấy từ Frontend
+    const { name, phone, bio, avatarUrl } = req.body; 
+    
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, phone, bio, avatarUrl }, // Và cập nhật bio vào Database
+      { new: true }
+    ).select('-password');
+    
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi cập nhật profile', error: error.message });
+  }
+};
 // [PUT] /api/users/change-password - Đổi mật khẩu
 exports.changePassword = async (req, res) => {
   try {
