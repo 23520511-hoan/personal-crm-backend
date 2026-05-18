@@ -53,15 +53,40 @@ exports.createContact = async (req, res) => {
   try {
     console.log("=== DỮ LIỆU FRONTEND GỬI LÊN ĐỂ TẠO CONTACT ===", req.body);
     
-    const contactData = { ...req.body, userId: req.user._id };
+    // Tách riêng cái mảng specialDays ra khỏi phần còn lại của body
+    const { specialDays, ...otherData } = req.body; 
     
-    // TẤM KHIÊN THÉP: Kiểm tra xem statusId có phải ID chuẩn 24 ký tự của MongoDB không
+    const contactData = { ...otherData, userId: req.user._id };
+    
+    // [KHIÊN THÉP CŨ] Chặn ID dỏm
     if (contactData.statusId && !mongoose.Types.ObjectId.isValid(contactData.statusId)) {
       console.log(`⚠️ Bỏ qua statusId dỏm từ Frontend: ${contactData.statusId}`);
       delete contactData.statusId; 
     }
 
+    // BƯỚC 1: Tạo Contact trước
     const contact = await Contact.create(contactData);
+
+    // BƯỚC 2: Xử lý Special Days nếu Frontend có gửi kèm lúc tạo
+    // (Nếu ông thiết kế SpecialDay là 1 mảng nằm CÙNG TRONG bảng Contact thì bỏ qua Bước 2 này)
+    // (Còn nếu SpecialDay là một Cột/Bảng riêng, thì gọi code tạo ở đây)
+    if (specialDays && Array.isArray(specialDays) && specialDays.length > 0) {
+      console.log("--- BẮT ĐẦU TẠO SPECIAL DAYS KÈM THEO ---");
+      
+      // Giả sử ông có Model SpecialDay riêng (Nhớ require ở đầu file nha)
+      // const SpecialDay = require('../models/SpecialDay');
+      // const daysToInsert = specialDays.map(day => ({
+      //   ...day,
+      //   contactId: contact._id,
+      //   userId: req.user._id
+      // }));
+      // await SpecialDay.insertMany(daysToInsert);
+      
+      // Hoặc nếu SpecialDay là mảng sub-document trong Contact:
+      contact.specialDays = specialDays;
+      await contact.save();
+    }
+
     res.status(201).json(contact);
   } catch (error) {
     console.error("!!! BẮT ĐƯỢC LỖI TẠO CONTACT !!!", error);
