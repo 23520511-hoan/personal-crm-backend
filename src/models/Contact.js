@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const specialDaySchema = new mongoose.Schema({
-  occasion: { type: String, required: true, trim: true },
+  name: { type: String, required: true, trim: true }, // Đã đổi occasion thành name cho khớp API
   date: { type: Date, required: true },
   note: { type: String, trim: true },
   repeatYearly: { type: Boolean, default: false },
@@ -21,10 +21,10 @@ const contactSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, index: true },
   phone: { type: String, trim: true },
   email: { type: String, trim: true, lowercase: true },
-  dob: { type: Date },
+  birthday: { type: Date }, // Đã đổi dob thành birthday
   address: { type: String },
   avatarUrl: { type: String },
-  socialLinks: [{ type: String }],
+  socialLinks: [{ type: String }], // Lưu ý: Đây là mảng (Array) chứa các link
   statusId: { type: mongoose.Schema.Types.ObjectId, ref: 'Status' },
   source: { type: String, trim: true, default: 'Chưa phân loại' }, // Nguồn quen biết trong UI
   
