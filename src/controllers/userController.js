@@ -12,25 +12,27 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// ... Ở dưới là mấy hàm updateProfile, changePassword cũ của bro cứ giữ nguyên ...
-
-// [PUT] /api/users/profile - Sửa thông tin cá nhân
+// [PUT] /api/users/profile - Sửa thông tin cá nhân (Nhận Token từ Frontend)
 exports.updateProfile = async (req, res) => {
   try {
-    // Phải có chữ bio ở đây thì nó mới lấy từ Frontend
-    const { name, phone, bio, avatarUrl } = req.body; 
+    console.log("=== DỮ LIỆU FRONTEND CẬP NHẬT PROFILE ===", req.body);
+    
+    // Đã thêm expoPushToken vào đây để hứng data từ Trung gửi lên
+    const { name, phone, bio, avatarUrl, expoPushToken } = req.body; 
     
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { name, phone, bio, avatarUrl }, // Và cập nhật bio vào Database
+      { name, phone, bio, avatarUrl, expoPushToken }, // Nhét vô Database
       { new: true }
     ).select('-password');
     
     res.json(updatedUser);
   } catch (error) {
+    console.error("LỖI CẬP NHẬT PROFILE:", error);
     res.status(500).json({ message: 'Lỗi cập nhật profile', error: error.message });
   }
 };
+
 // [PUT] /api/users/change-password - Đổi mật khẩu
 exports.changePassword = async (req, res) => {
   try {
