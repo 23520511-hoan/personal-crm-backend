@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: Personal CRM Mobile API
+  description: API Documentation for Personal CRM System.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Local Development Server
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get profile
+    patch:
+      tags: [Users]
+      summary: Update profile
+  /contacts:
+    get:
+      tags: [Contacts]
+      summary: Get all contacts
+    post:
+      tags: [Contacts]
+      summary: Create contact
+  /contacts/{id}:
+    put:
+      tags: [Contacts]
+      summary: Update contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+    delete:
+      tags: [Contacts]
+      summary: Delete contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+  /notes:
+    get:
+      tags: [Notes]
+      summary: Get all notes
+    post:
+      tags: [Notes]
+      summary: Create note
+  /statuses:
+    get:
+      tags: [Statuses]
+      summary: Get all statuses
+    post:
+      tags: [Statuses]
+      summary: Create status
+  /statuses/{id}:
+    patch:
+      tags: [Statuses]
+      summary: Update status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+    delete:
+      tags: [Statuses]
+      summary: Soft delete status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get notifications
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get stats
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
