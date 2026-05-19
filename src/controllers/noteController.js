@@ -55,6 +55,9 @@ exports.getNoteById = async (req, res) => {
 
     res.json(noteObj);
   } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
     res.status(500).json({ message: 'Lỗi server khi lấy ghi chú', error: error.message });
   }
 };
