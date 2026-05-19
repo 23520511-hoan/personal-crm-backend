@@ -4,10 +4,13 @@ info:
   description: API Documentation for Personal CRM System.
   version: 1.0.0
 servers:
+  - url: https://personal-crm-backend-5uab.onrender.com/api
+    description: Production Server (Render)
   - url: http://localhost:5000/api
     description: Local Development Server
 
 paths:
+# ... (Giữ nguyên phần dưới của bro)
   /auth/register:
     post:
       tags: [Auth]
