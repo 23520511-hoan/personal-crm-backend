@@ -2,12 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const path = require('path'); 
+const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
+const { startReminderJob } = require('./utils/reminderJob');
 
 // 1. Connect to Database
 connectDB();
+
+// 2. Khởi động Cron Job kiểm tra Reminder
+startReminderJob();
 
 // 2. Khởi tạo app
 const app = express();
