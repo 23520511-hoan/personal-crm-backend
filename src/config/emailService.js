@@ -1,38 +1,40 @@
 const nodemailer = require('nodemailer');
 
+// 👉 Cục cấu hình mới chống văng lỗi trên Cloud
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com', // Bắt buộc dùng host thay vì service
+  port: 465,
+  secure: true, // Dùng SSL
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App Password của Gmail
+    pass: process.env.EMAIL_PASS
   },
+  tls: {
+    rejectUnauthorized: false // Bỏ qua lỗi chứng chỉ của server Render
+  }
 });
 
-/**
- * Gửi OTP qua email
- * @param {string} toEmail - Email nhận
- * @param {string} otp - Mã OTP 6 số
- */
-const sendOtpEmail = async (toEmail, otp) => {
-  const mailOptions = {
-    from: `"Personal CRM" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: 'Mã xác thực tài khoản của bạn',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border: 1px solid #e0e0e0; border-radius: 12px;">
-        <h2 style="color: #1a4731; text-align: center;">Personal CRM</h2>
-        <p>Xin chào,</p>
-        <p>Mã xác thực của bạn là:</p>
-        <div style="text-align: center; margin: 24px 0;">
-          <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1a4731;">${otp}</span>
+exports.sendOtpEmail = async (email, otp) => {
+  try {
+    const mailOptions = {
+      from: `"Personal CRM" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Mã xác thực OTP của bạn',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Xin chào!</h2>
+          <p>Mã xác thực OTP của bạn là: <b style="font-size: 24px; color: #4CAF50;">${otp}</b></p>
+          <p>Mã này sẽ hết hạn trong vòng 10 phút.</p>
+          <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email.</p>
         </div>
-        <p>Mã có hiệu lực trong <strong>10 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
-        <p style="color: #888; font-size: 12px;">Nếu bạn không yêu cầu mã này, hãy bỏ qua email này.</p>
-      </div>
-    `,
-  };
+      `
+    };
 
-  await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Đã gửi email thành công: ' + info.response);
+    return true;
+  } catch (error) {
+    console.error('❌ Lỗi khi gửi email:', error);
+    throw new Error('Không thể gửi email OTP');
+  }
 };
-
-module.exports = { sendOtpEmail };

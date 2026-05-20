@@ -1,10 +1,14 @@
 require('dotenv').config();
+require('dns').setDefaultResultOrder('ipv4first'); // 👉 DÒNG TRỊ BỆNH IPV6 LÀ ĐÂY
+
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path'); 
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
+
+// ... (tất cả code phía dưới của ông giữ nguyên y xì đúc)
 
 // 1. Connect to Database
 connectDB();
