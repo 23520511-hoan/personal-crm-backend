@@ -33,6 +33,35 @@ exports.getNotes = async (req, res) => {
   }
 };
 
+// [GET] /api/notes/:id - Lấy chi tiết 1 ghi chú
+exports.getNoteById = async (req, res) => {
+  try {
+    const note = await Note.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      isDeleted: false
+    }).populate('contactId', 'name avatarUrl');
+
+    if (!note) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    // Format lại data như trong getNotes
+    const noteObj = note.toObject();
+    if (noteObj.contactId) {
+      noteObj.contact = noteObj.contactId;
+      noteObj.contactId = noteObj.contactId._id;
+    }
+
+    res.json(noteObj);
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+    res.status(500).json({ message: 'Lỗi server khi lấy ghi chú', error: error.message });
+  }
+};
+
 // [POST] /api/notes
 exports.createNote = async (req, res) => {
   try {

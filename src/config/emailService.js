@@ -1,16 +1,15 @@
 const nodemailer = require('nodemailer');
 
-// 👉 Cục cấu hình mới chống văng lỗi trên Cloud
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // Bắt buộc dùng host thay vì service
+  host: 'smtp.gmail.com', // Cứu tinh của Render đây
   port: 465,
-  secure: true, // Dùng SSL
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS, 
   },
   tls: {
-    rejectUnauthorized: false // Bỏ qua lỗi chứng chỉ của server Render
+    rejectUnauthorized: false
   }
 });
 
@@ -24,10 +23,10 @@ exports.sendOtpEmail = async (email, otp) => {
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Xin chào!</h2>
           <p>Mã xác thực OTP của bạn là: <b style="font-size: 24px; color: #4CAF50;">${otp}</b></p>
-          <p>Mã này sẽ hết hạn trong vòng 10 phút.</p>
-          <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email.</p>
+          <p>Mã này có hiệu lực trong <strong>10 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+          <p style="color: #888; font-size: 12px;">Nếu bạn không yêu cầu mã này, hãy bỏ qua email này.</p>
         </div>
-      `
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
