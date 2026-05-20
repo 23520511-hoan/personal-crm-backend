@@ -4,7 +4,8 @@ const Contact = require('../models/Contact');
 // [GET] /api/statuses - Lấy danh sách trạng thái của user
 exports.getStatuses = async (req, res) => {
   try {
-    let statuses = await Status.find({ userId: req.user._id, isDeleted: false });
+    // Dùng $ne: true để match cả document cũ (không có field isDeleted) lẫn document mới (isDeleted: false)
+    let statuses = await Status.find({ userId: req.user._id, isDeleted: { $ne: true } });
     
     if (statuses.length === 0) {
       // Đếm xem thực sự user đã có status nào trong database chưa (kể cả cái bị ẩn)
@@ -23,7 +24,7 @@ exports.getStatuses = async (req, res) => {
         }
       }
       // Query lại sau khi xử lý
-      statuses = await Status.find({ userId: req.user._id, isDeleted: false });
+      statuses = await Status.find({ userId: req.user._id, isDeleted: { $ne: true } });
     }
     
     res.json(statuses);
@@ -39,7 +40,7 @@ exports.createStatus = async (req, res) => {
     const { name, color } = req.body;
 
     // Kiểm tra xem tên status đang hoạt động đã tồn tại chưa (bỏ qua những cái đã xóa mềm)
-    const existingStatus = await Status.findOne({ userId: req.user._id, name, isDeleted: false });
+    const existingStatus = await Status.findOne({ userId: req.user._id, name, isDeleted: { $ne: true } });
     if (existingStatus) {
       return res.status(400).json({ message: 'Tên trạng thái này đã tồn tại' });
     }
@@ -60,7 +61,7 @@ exports.createStatus = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const status = await Status.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id, isDeleted: false },
+      { _id: req.params.id, userId: req.user._id, isDeleted: { $ne: true } },
       req.body,
       { new: true }
     );
@@ -79,7 +80,7 @@ exports.deleteStatus = async (req, res) => {
 
     // Chuyển sang tìm và cập nhật cờ xóa mềm để đồng bộ cấu trúc hệ thống
     const status = await Status.findOneAndUpdate(
-      { _id: statusId, userId: req.user._id, isDeleted: false },
+      { _id: statusId, userId: req.user._id, isDeleted: { $ne: true } },
       { $set: { isDeleted: true } },
       { new: true }
     );
