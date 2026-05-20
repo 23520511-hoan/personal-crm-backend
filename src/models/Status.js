@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const statusSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true, trim: true },
-  color: { type: String, default: '#000000' }
+  color: { type: String, default: '#000000' },
+  isDeleted: { type: Boolean, default: false } // Soft delete flag
 }, { timestamps: true });
 
 // Ràng buộc: Một user không được có 2 status trùng tên
