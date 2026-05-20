@@ -1,98 +1,895 @@
 openapi: 3.0.3
 info:
   title: Personal CRM Mobile API
-  description: API Documentation for Personal CRM System.
+  description: |
+    API Documentation for Personal CRM System.
+
+    **Authentication:** Most endpoints require a Bearer token in the `Authorization` header.
+    Get token by calling `/auth/login` or `/auth/verify-otp`.
   version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/23520511-hoan/personal-crm-backend
+
 servers:
   - url: https://personal-crm-backend-5uab.onrender.com/api
     description: Production Server (Render)
   - url: http://localhost:5000/api
     description: Local Development Server
 
+tags:
+  - name: Auth
+    description: Authentication & registration (login, OTP, password reset)
+  - name: Users
+    description: User profile management
+  - name: Statuses
+    description: Relationship status tags (Close Friend, Work, etc.)
+  - name: Contacts
+    description: Contact management
+  - name: Special Days
+    description: Special days for contacts (birthdays, anniversaries)
+  - name: Notes
+    description: Notes & reminders
+  - name: Notifications
+    description: Push notifications & in-app messages
+  - name: Dashboard
+    description: Home screen aggregate data
+
+# ════════════════════════════════════════════════════════════════
+# PATHS
+# ════════════════════════════════════════════════════════════════
 paths:
-# ... (Giữ nguyên phần dưới của bro)
+
+  # ─── AUTH ────────────────────────────────────────────────────
   /auth/register:
     post:
       tags: [Auth]
-      summary: Register user
+      summary: Step 1 - Register account
+      description: Creates an unverified account and sends OTP via email/SMS.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone, password]
+              properties:
+                emailOrPhone: { type: string, example: "user@gmail.com" }
+                password: { type: string, minLength: 6, example: "123456" }
+      responses:
+        '201':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  emailOrPhone: { type: string }
+        '400': { description: Validation error or account already exists }
+        '500': { description: Server error }
+
+  /auth/resend-otp:
+    post:
+      tags: [Auth]
+      summary: Resend OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone]
+              properties:
+                emailOrPhone: { type: string }
+      responses:
+        '200': { description: OTP resent }
+        '404': { description: Account not found }
+
   /auth/verify-otp:
     post:
       tags: [Auth]
-      summary: Verify OTP
+      summary: Step 2 - Verify OTP
+      description: Verifies the OTP code and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone, otp]
+              properties:
+                emailOrPhone: { type: string }
+                otp: { type: string, example: "123456" }
+      responses:
+        '200':
+          description: Verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  token: { type: string }
+                  needsName: { type: boolean }
+        '400': { description: Wrong or expired OTP }
+        '404': { description: Account not found }
+
+  /auth/setup-name:
+    post:
+      tags: [Auth]
+      summary: Step 3 - Setup user name
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: "Bảo Trung" }
+      responses:
+        '200':
+          description: Name updated, returns final auth payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone, password]
+              properties:
+                emailOrPhone: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401': { description: Wrong email/phone or password }
+        '403': { description: Account not verified }
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Login with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken: { type: string, description: Google Sign-In ID token }
+      responses:
+        '200':
+          description: Login/register successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Forgot password - send OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone]
+              properties:
+                emailOrPhone: { type: string }
+      responses:
+        '200': { description: OTP sent }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrPhone, otp, newPassword]
+              properties:
+                emailOrPhone: { type: string }
+                otp: { type: string }
+                newPassword: { type: string, minLength: 6 }
+      responses:
+        '200': { description: Password reset }
+        '400': { description: Wrong OTP }
+
+  /auth/change-password:
+    put:
+      tags: [Auth]
+      summary: Change password (logged in)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 6 }
+      responses:
+        '200': { description: Password changed }
+        '400': { description: Wrong current password }
+
+  # ─── USERS ───────────────────────────────────────────────────
   /users/me:
     get:
       tags: [Users]
-      summary: Get profile
+      summary: Get my profile
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
     patch:
       tags: [Users]
-      summary: Update profile
-  /contacts:
-    get:
-      tags: [Contacts]
-      summary: Get all contacts
-    post:
-      tags: [Contacts]
-      summary: Create contact
-  /contacts/{id}:
+      summary: Update my profile
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                bio: { type: string }
+                avatarUrl: { type: string }
+                expoPushToken: { type: string, description: Expo push notification token }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /users/profile:
     put:
-      tags: [Contacts]
-      summary: Update contact
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-    delete:
-      tags: [Contacts]
-      summary: Delete contact
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-  /notes:
-    get:
-      tags: [Notes]
-      summary: Get all notes
-    post:
-      tags: [Notes]
-      summary: Create note
+      tags: [Users]
+      summary: Update profile (alias for PATCH /users/me)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                bio: { type: string }
+                avatarUrl: { type: string }
+      responses:
+        '200': { description: Updated }
+
+  /users/change-password:
+    put:
+      tags: [Users]
+      summary: Change password
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        '200': { description: Password changed }
+
+  # ─── STATUSES ────────────────────────────────────────────────
   /statuses:
     get:
       tags: [Statuses]
       summary: Get all statuses
+      security: [{ BearerAuth: [] }]
+      description: Returns user's statuses. Auto-creates 3 defaults (Close Friend, Work, Other) if user has none.
+      responses:
+        '200':
+          description: List of statuses
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Status' }
     post:
       tags: [Statuses]
-      summary: Create status
+      summary: Create new status
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: "Family" }
+                color: { type: string, example: "#FF5733" }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Status' }
+        '400': { description: Name already exists }
+
   /statuses/{id}:
     patch:
       tags: [Statuses]
       summary: Update status
+      security: [{ BearerAuth: [] }]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                color: { type: string }
+      responses:
+        '200': { description: Updated }
+        '404': { description: Not found }
     delete:
       tags: [Statuses]
       summary: Soft delete status
+      security: [{ BearerAuth: [] }]
+      description: Sets isDeleted=true. Removes statusId from all contacts using it.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Deleted }
+
+  # ─── CONTACTS ────────────────────────────────────────────────
+  /contacts:
+    get:
+      tags: [Contacts]
+      summary: Get all contacts
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: search, in: query, schema: { type: string }, description: Search by name }
+        - { name: statusId, in: query, schema: { type: string }, description: Filter by status }
+        - { name: source, in: query, schema: { type: string }, description: Filter by source }
+      responses:
+        '200':
+          description: List of contacts (status populated)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Contact' }
+    post:
+      tags: [Contacts]
+      summary: Create contact (full info)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contact' }
+
+  /contacts/quick:
+    post:
+      tags: [Contacts]
+      summary: Quick create contact (name only)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '201': { description: Created }
+
+  /contacts/{id}:
+    get:
+      tags: [Contacts]
+      summary: Get contact detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Contact detail (includes specialDays)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contact' }
+        '404': { description: Not found }
+    patch:
+      tags: [Contacts]
+      summary: Update contact
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactInput' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Contacts]
+      summary: Soft delete contact
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Moved to trash }
+
+  /contacts/{id}/timeline:
+    get:
+      tags: [Contacts]
+      summary: Get contact timeline (notes + special days merged)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Timeline data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contact: { type: object }
+                  timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type: { type: string, enum: [NOTE, SPECIAL_DAY] }
+                        id: { type: string }
+                        content: { type: string }
+                        date: { type: string, format: date-time }
+
+  # ─── SPECIAL DAYS ────────────────────────────────────────────
+  /contacts/{contactId}/special-days:
+    post:
+      tags: [Special Days]
+      summary: Add special day to contact
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: contactId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SpecialDayInput' }
+      responses:
+        '201': { description: Created }
+
+  /contacts/{contactId}/special-days/{specialDayId}:
+    patch:
+      tags: [Special Days]
+      summary: Update special day
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: contactId, in: path, required: true, schema: { type: string } }
+        - { name: specialDayId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SpecialDayInput' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Special Days]
+      summary: Delete special day
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: contactId, in: path, required: true, schema: { type: string } }
+        - { name: specialDayId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Deleted }
+
+  # ─── NOTES ───────────────────────────────────────────────────
+  /notes:
+    get:
+      tags: [Notes]
+      summary: Get all notes
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: contactId, in: query, schema: { type: string }, description: Filter by contact }
+        - { name: search, in: query, schema: { type: string }, description: Search in content }
+      responses:
+        '200':
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Note' }
+    post:
+      tags: [Notes]
+      summary: Create note
+      security: [{ BearerAuth: [] }]
+      description: Either `contactId` is required, or `contactName` + `createContactIfMissing: true` to auto-create.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+                title: { type: string }
+                contactId: { type: string }
+                contactName: { type: string }
+                createContactIfMissing: { type: boolean }
+                interactionDate: { type: string, format: date-time }
+      responses:
+        '201': { description: Created }
+
+  /notes/{id}:
+    get:
+      tags: [Notes]
+      summary: Get note detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Note detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+        '404': { description: Not found }
+    patch:
+      tags: [Notes]
+      summary: Update note
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                title: { type: string }
+                interactionDate: { type: string, format: date-time }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Notes]
+      summary: Soft delete note
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Moved to trash }
+
+  /notes/{id}/reminder:
+    put:
+      tags: [Notes]
+      summary: Set/update note reminder
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, remindAt]
+              properties:
+                enabled: { type: boolean }
+                remindAt: { type: string, format: date-time, description: ISO date in UTC }
+                content: { type: string }
+      responses:
+        '200': { description: Reminder set }
+    delete:
+      tags: [Notes]
+      summary: Remove note reminder
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Reminder removed }
+
+  # ─── NOTIFICATIONS ───────────────────────────────────────────
   /notifications:
     get:
       tags: [Notifications]
       summary: Get notifications
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: isRead, in: query, schema: { type: boolean }, description: Filter by read status }
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Notification' }
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread count (for badge)
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unreadCount: { type: integer }
+
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark all as read
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: All marked as read }
+
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark single notification as read
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Marked as read }
+
+  # ─── DASHBOARD ───────────────────────────────────────────────
   /dashboard:
     get:
       tags: [Dashboard]
-      summary: Get stats
+      summary: Get home screen aggregate data
+      security: [{ BearerAuth: [] }]
+      description: |
+        Returns:
+        - 5 most recent notes
+        - 5 upcoming reminders (within future)
+        - 5 upcoming special days (within next 30 days)
+        - 5 recently updated contacts
+        - Unread notification count
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recentNotes: { type: array, items: { $ref: '#/components/schemas/Note' } }
+                  upcomingReminders: { type: array, items: { $ref: '#/components/schemas/Note' } }
+                  upcomingSpecialDays:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        contactId: { type: string }
+                        contactName: { type: string }
+                        date: { type: string, format: date-time }
+                        occasion: { type: string }
+                  recentContacts: { type: array, items: { $ref: '#/components/schemas/Contact' } }
+                  unreadNotificationCount: { type: integer }
 
+# ════════════════════════════════════════════════════════════════
+# COMPONENTS
+# ════════════════════════════════════════════════════════════════
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  schemas:
+
+    AuthResponse:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string, nullable: true }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
+        token: { type: string, description: JWT token }
+
+    User:
+      type: object
+      properties:
+        _id: { type: string }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
+        bio: { type: string }
+        isVerified: { type: boolean }
+        expoPushToken: { type: string }
+        authProvider: { type: string, enum: [local, google] }
+        settings:
+          type: object
+          properties:
+            language: { type: string, enum: [vi, en] }
+            darkMode: { type: boolean }
+            notifications:
+              type: object
+              properties:
+                allEnabled: { type: boolean }
+                reminders: { type: boolean }
+                specialDays: { type: boolean }
+                connectionHints: { type: boolean }
+            quietHours:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                start: { type: string, example: "22:00" }
+                end: { type: string, example: "07:00" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Status:
+      type: object
+      properties:
+        _id: { type: string }
+        userId: { type: string }
+        name: { type: string, example: "Close Friend" }
+        color: { type: string, example: "#FF5733" }
+        isDeleted: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Contact:
+      type: object
+      properties:
+        _id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        birthday: { type: string, format: date }
+        address: { type: string }
+        avatarUrl: { type: string }
+        socialLinks:
+          type: array
+          items: { type: string }
+        statusId:
+          oneOf:
+            - { type: string }
+            - { $ref: '#/components/schemas/Status' }
+        source: { type: string, example: "Bạn học" }
+        specialDays:
+          type: array
+          items: { $ref: '#/components/schemas/SpecialDay' }
+        importedFrom: { type: string, enum: [manual, google] }
+        isDeleted: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ContactInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        birthday: { type: string, format: date }
+        address: { type: string }
+        avatarUrl: { type: string }
+        socialLinks: { type: array, items: { type: string } }
+        statusId: { type: string }
+        source: { type: string }
+        specialDays: { type: array, items: { $ref: '#/components/schemas/SpecialDayInput' } }
+
+    SpecialDay:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string, example: "Sinh nhật" }
+        date: { type: string, format: date }
+        note: { type: string }
+        repeatYearly: { type: boolean }
+        reminder:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            remindBeforeDays: { type: integer }
+            remindTime: { type: string, example: "09:00" }
+            timezone: { type: string, example: "Asia/Ho_Chi_Minh" }
+            nextReminderAt: { type: string, format: date-time }
+            isSent: { type: boolean }
+
+    SpecialDayInput:
+      type: object
+      required: [name, date]
+      properties:
+        name: { type: string }
+        date: { type: string, format: date }
+        note: { type: string }
+        repeatYearly: { type: boolean }
+        reminder:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            remindBeforeDays: { type: integer }
+            remindTime: { type: string }
+            timezone: { type: string }
+
+    Note:
+      type: object
+      properties:
+        _id: { type: string }
+        userId: { type: string }
+        contactId:
+          oneOf:
+            - { type: string }
+            - type: object
+              properties:
+                _id: { type: string }
+                name: { type: string }
+                avatarUrl: { type: string }
+        title: { type: string }
+        content: { type: string }
+        interactionDate: { type: string, format: date-time }
+        reminder:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            remindAt: { type: string, format: date-time, nullable: true }
+            content: { type: string }
+            isSent: { type: boolean }
+        isDeleted: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      properties:
+        _id: { type: string }
+        userId: { type: string }
+        content: { type: string }
+        type: { type: string, enum: [REMINDER, SPECIAL_DAY, SUGGESTION, SYSTEM] }
+        relatedId: { type: string }
+        onModel: { type: string, enum: [Contact, Note] }
+        specialDayId: { type: string }
+        isRead: { type: boolean }
+        createdAt: { type: string, format: date-time }
