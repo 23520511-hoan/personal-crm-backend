@@ -13,8 +13,8 @@ const noteSchema = new mongoose.Schema({
   reminder: {
     enabled: { type: Boolean, default: false },
     remindAt: { type: Date },
-    isSent: { type: Boolean, default: false } 
-    // Đã bỏ repeatYearly theo yêu cầu
+    content: { type: String, default: '' }, // Nội dung nhắc nhở tuỳ chỉnh
+    isSent: { type: Boolean, default: false }
   },
 
   isDeleted: { type: Boolean, default: false, index: true },
