@@ -35,12 +35,13 @@ exports.sendOtpEmail = async (email, otp) => {
     // KHI CHẠY TRÊN RENDER FREE SẼ RƠI VÀO ĐÂY DO BỊ CHẶN PORT SMTP
     console.error('❌ Render chặn gửi Mail SMTP. Đang bật chế độ DEV TEST.');
     
-    // In thẳng mã OTP ra log để Frontend dev (Trung) nhìn thấy và test
+    // TẠM THỜI TẮT DÒNG NÀY KHI TEST TRÊN RENDER FREE
+    // await transporter.sendMail(mailOptions); 
+    
     console.log(`\n=========================================`);
     console.log(`🚨 MÃ OTP CỦA [${email}] LÀ: ${otp}`);
     console.log(`=========================================\n`);
     
-    // Bỏ lệnh 'throw new Error' để API KHÔNG BỊ CRASH, vẫn trả về HTTP 201 cho Frontend
-    return true; 
+    return true; // Trả về luôn cho Frontend chạy tiếp
   }
 };
