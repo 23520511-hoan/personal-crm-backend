@@ -1,9 +1,9 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // Cứu tinh của Render đây
-  port: 465,
-  secure: true,
+  host: 'smtp.gmail.com',
+  port: 587, // 👉 ĐỔI TỪ 465 SANG 587
+  secure: false, // 👉 BẮT BUỘC ĐỔI THÀNH FALSE KHI DÙNG PORT 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS, 
