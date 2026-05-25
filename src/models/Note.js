@@ -14,7 +14,8 @@ const noteSchema = new mongoose.Schema({
     enabled: { type: Boolean, default: false },
     remindAt: { type: Date },
     content: { type: String, default: '' }, // Nội dung nhắc nhở tuỳ chỉnh
-    isSent: { type: Boolean, default: false }
+    isTwoHourSent: { type: Boolean, default: false }, // 👉 Đánh dấu đã gửi nhắc nhở trước 2h
+    isSent: { type: Boolean, default: false } // 👉 Đánh dấu đã gửi đúng giờ
   },
 
   isDeleted: { type: Boolean, default: false, index: true },

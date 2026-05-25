@@ -18,17 +18,14 @@ exports.getNotes = async (req, res) => {
     const formattedNotes = notes.map(note => {
       const noteObj = note.toObject();
       if (noteObj.contactId) {
-        // Nhét object vào trường 'contact' để adapter đọc được tên/avatar
         noteObj.contact = noteObj.contactId; 
-        // Trả 'contactId' về lại thành chuỗi ID khô khan
         noteObj.contactId = noteObj.contactId._id; 
       }
       return noteObj;
     });
 
-    res.json(formattedNotes); // Trả về biến đã format
+    res.json(formattedNotes);
   } catch (error) {
-    // PHẢI CÓ ĐOẠN NÀY ĐỂ BẮT LỖI NẾU CÓ BẤT TRẮC
     res.status(500).json({ message: 'Lỗi server khi lấy danh sách ghi chú', error: error.message });
   }
 };
@@ -46,7 +43,6 @@ exports.getNoteById = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
-    // Format lại data như trong getNotes
     const noteObj = note.toObject();
     if (noteObj.contactId) {
       noteObj.contact = noteObj.contactId;
@@ -96,6 +92,7 @@ exports.createNote = async (req, res) => {
       title: title || '',
       content,
       interactionDate: interactionDate || Date.now()
+      // Lưu ý: Không cần cấu hình reminder ở đây vì lúc Create, Mongoose đã lấy mặc định là false cho các biến cờ.
     });
 
     res.status(201).json(note);
@@ -107,9 +104,17 @@ exports.createNote = async (req, res) => {
 // [PATCH] /api/notes/:id
 exports.updateNote = async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
+    // 👉 NẾU NGƯỜI DÙNG ĐỔI GIỜ NHẮC NHỞ TỪ API PATCH NÀY, RESET LẠI CỜ THÔNG BÁO
+    if (updateData.reminder && updateData.reminder.remindAt) {
+      updateData['reminder.isTwoHourSent'] = false;
+      updateData['reminder.isSent'] = false;
+    }
+
     const note = await Note.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id, isDeleted: false },
-      req.body,
+      { $set: updateData },
       { new: true }
     );
 
@@ -140,8 +145,6 @@ exports.deleteNote = async (req, res) => {
 exports.updateNoteReminder = async (req, res) => {
   try {
     const { enabled, remindAt, content } = req.body;
-    
-    // Ép kiểu ngày tháng để MongoDB hiểu đúng chuẩn UTC
     const parsedRemindAt = remindAt ? new Date(remindAt) : null;
 
     const note = await Note.findOneAndUpdate(
@@ -149,9 +152,10 @@ exports.updateNoteReminder = async (req, res) => {
       {
         $set: {
           'reminder.enabled': enabled,
-          'reminder.remindAt': parsedRemindAt, // Dùng biến đã ép kiểu
+          'reminder.remindAt': parsedRemindAt,
           'reminder.content': content || '',
-          'reminder.isSent': false
+          'reminder.isTwoHourSent': false, // 👉 RESET LẠI BỘ ĐẾM SỚM
+          'reminder.isSent': false         // 👉 RESET LẠI BỘ ĐẾM ĐÚNG GIỜ
         }
       },
       { new: true }
@@ -174,6 +178,7 @@ exports.deleteNoteReminder = async (req, res) => {
           'reminder.enabled': false,
           'reminder.remindAt': null,
           'reminder.content': '',
+          'reminder.isTwoHourSent': false, // Trả về false cho sạch sẽ
           'reminder.isSent': false
         }
       },
